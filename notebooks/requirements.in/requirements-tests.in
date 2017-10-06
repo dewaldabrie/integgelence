@@ -1,0 +1,9 @@
+coverage
+PyVirtualDisplay
+selenium<4
+pep8
+pylint
+tblib
+mock
+
+-r requirements-install.in
