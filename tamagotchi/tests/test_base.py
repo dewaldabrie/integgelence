@@ -25,7 +25,7 @@ class TestTamagotchiBase(unittest.TestCase):
         self.t.state = np.zeros(len(self.t.state), dtype=np.float64)
 
         # calculate state change based on fake input
-        self.t.receive_input(fake_input)
+        self.t._receive_input(fake_input)
 
         print(self.t.state)
         self.assertTrue((self.t.state == np.ones(4, dtype=np.float64)).all())
@@ -54,7 +54,7 @@ class TestTamagotchiBase(unittest.TestCase):
         input = np.array([1,1,1])
         self.assertFalse(input.sum() == 1.0)
 
-        res = self.t.normalize(input)
+        res = self.t._normalize(input)
         self.assertTrue(res.sum() == 1.0, msg=f"Answer is {res}, instead of 1.0")
 
     def test_normalize_on_zeros(self):
@@ -64,7 +64,7 @@ class TestTamagotchiBase(unittest.TestCase):
         input = np.zeros(5)
         self.assertAlmostEqual(input.sum(), 0.0, places=4)
 
-        res = self.t.normalize(input)
+        res = self.t._normalize(input)
         self.assertTrue(res.sum() == 0.0, msg=f"Answer is {res}, instead of 0.0")
 
     def test_normalize_on_negatives(self):
@@ -74,7 +74,7 @@ class TestTamagotchiBase(unittest.TestCase):
         input = np.zeros(5) * -1
         self.assertFalse(input.sum() == 1.0)
 
-        res = self.t.normalize(input)
+        res = self.t._normalize(input)
         self.assertTrue(res.sum() == 0.0, msg=f"Answer is {res}, instead of 0.0")
 
     def test_health_calcs(self):

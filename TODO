@@ -1,4 +1,7 @@
-[] test mock input passing to tamagotchi
+[done] test mock input passing to tamagotchi
+[] add time loop
+[] add event queues
+[] add meta class for tamagotchi factory
 [] Add life-cycles
 [] Add interactions
   [] Capable of being fed

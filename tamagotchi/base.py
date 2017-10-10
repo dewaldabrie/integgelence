@@ -1,5 +1,12 @@
+import os
 import numpy as np
 from math import log
+import pickle
+import time
+from tamagotchi.settings import LOOP_PERIOD
+from settings import BASE_DIR
+from collections import namedtuple, OrderedDict
+from typing import Dict, List, Union
 
 # input affects Tamagotchi's internal state
 ALLOWABLE_INPUTS = {
@@ -20,13 +27,17 @@ ALLOWABLE_INTERACTIONS = {
             'shelter', # TODO
         }
 
+class TamagotchiMeta(type):
+    pass
 
-class Tamagotchi:
+
+class Tamagotchi():
     """
     Define the base attributes and methods of a Tamagotchi.
     """
     # general attributes
     species_name = 'Tamagotchi'
+    unique_name = "abcdef"
 
     # possible active states
     ACTIVE_STATES = {
@@ -48,7 +59,8 @@ class Tamagotchi:
     # physical attributes
     adult_mean_weight = 100  # kg
     weight = adult_mean_weight
-    age = 1./365  # years
+    age = 1  # seconds
+    _last_update_time = None
 
     # parameters
     #  takes on values between 0 and 1.0 (inclusive)
@@ -65,7 +77,7 @@ class Tamagotchi:
         Appetite drops with age
         See notebooks/InteractionModel.ipynb
         """
-        return 0.5 + np.log(self.age) / log(1. / 365) * 0.5
+        return 0.5 + np.log(self.age / 24 / 3600) / log(1. / 24 / 3600) * 0.5
 
     disease_succeptibility = 0.5
     weather_resistance = 0.5
@@ -134,12 +146,14 @@ class Tamagotchi:
     # to the type of health in question
     # these must correspond to the state variables in the same order
     # (nx1) dot (nx1) => (1x1)
-    mental_health_map = {
-        'nourishment' : food_affinity,
-        'social': (touch_affinity + social_affinity)/2.,
-        'fitness': excercise_affinity,
-        'undiseased': .5,
-    }
+    LinAttrComb = namedtuple('LinearAttributeCombination', ('attributes', 'coefficients'))
+
+    mental_health_map = OrderedDict(
+        nourishment=LinAttrComb(['food_affinity'], []),
+        social=LinAttrComb(['touch_affinity', 'social_affinity'], []),
+        fitness=LinAttrComb(['excercise_affinity'], []),
+        undiseased=.5,
+    )
     mental_health_weights = np.array([
         food_affinity, # nourishment
         (touch_affinity + social_affinity)/2., # social
@@ -147,18 +161,24 @@ class Tamagotchi:
         0.5, # undiseased
     ])
 
-    physical_health_map = {
-        'nourishment': appetite,
-        'social': 0.,
-        'fitness': excercise_required,
-        'undiseased': disease_succeptibility,
-    }
+    physical_health_map = OrderedDict(
+        nourishment=LinAttrComb(['appetite'], []),
+        social=0.,
+        fitness=LinAttrComb(['excercise_required'], []),
+        undiseased=LinAttrComb(['disease_succeptibility'], []),
+    )
     physical_health_weights = np.array([
         appetite, # average size needs average quantity of food
         0.0,
         excercise_required,
         disease_succeptibility,
     ])
+
+    def __init__(self,  unique_name):
+        self.unique_name = unique_name
+        # update health weights
+        self._update_mental_health_weights()
+        self._update_physical_health_weights()
 
     @property
     def mental_health(self):
@@ -181,7 +201,7 @@ class Tamagotchi:
         example over-eating and under-eating
         """
         # normalize the selection weights
-        norm_weights = self.normalize(weights)
+        norm_weights = self._normalize(weights)
         # calculate health
         health = 1.0 - np.dot(
             norm_weights,
@@ -190,7 +210,7 @@ class Tamagotchi:
         return health
     # energy properties
     @staticmethod
-    def normalize(vector:np.array) -> np.array:
+    def _normalize(vector:np.array) -> np.array:
         """
         Cause non-zero weight vectors to sum to 1.
         :param vector: numpy array with relative weights that indicate relative importance of corresponding values in
@@ -198,13 +218,13 @@ class Tamagotchi:
         :return: array that sums to 1, except zero array passes through
         """
         # make sure all values are positive
-        if vector.min() < 0.:
+        if np.min(vector) < 0.:
             vector += vector.min()
 
         s = vector.sum()
         return vector/s if s > 0 else vector
 
-    def receive_input(self, input:dict) -> None:
+    def _receive_input(self, input:dict) -> None:
         """
         Recieve an input from another agent and update the
         state (S) as required.
@@ -214,6 +234,12 @@ class Tamagotchi:
         input_mat = self._parse_input(input)
 
         self.state = self.state + np.squeeze(self.B*self.A*input_mat)
+        self._apply_state_limits()
+
+    def _apply_state_limits(self):
+        for idx, val in enumerate(self.state):
+            self.state[idx] = np.clip(val, -1, 1)
+
 
     def _parse_input(self, input_dict:dict) -> np.matrix:
         """
@@ -225,3 +251,74 @@ class Tamagotchi:
         result_dict = dict((name, 0.) for name in ALLOWABLE_INPUTS)
         result_dict.update(input_dict)
         return np.matrix(list(result_dict.values())).T
+
+
+    def update(self, input=None):
+        """
+        Update state
+        """
+
+        if input:
+            self._receive_input(input)
+
+        self._update_time_dependant_vars()
+
+        return (self.mental_health, self.physical_health)
+
+    def _update_time_dependant_vars(self):
+        """
+        Update the state variables that depend on time
+        """
+        # register update time
+        if self._last_update_time is None:
+            self._last_update_time = time.time() - LOOP_PERIOD
+        this_update_time = time.time()
+
+        # update age
+        self.age += time.time() - self._last_update_time
+
+        # update health weights
+        self._update_mental_health_weights()
+        self._update_physical_health_weights()
+
+        # update activity stage / sleep triggers
+
+        print(f'age: {self.age} s; mental health: {self.mental_health}; phys. health: {self.physical_health}; appetite: {self.appetite}; ')
+
+        self._last_update_time = this_update_time
+
+    def _calc_health_weights(self, vector_constituency:Union[float, int, Dict[str, LinAttrComb]]) -> np.array:
+        """
+        Update the vector according to the consituency definition.
+        """
+        updated = []
+        for name, lin_comb in vector_constituency.items():
+            if type(lin_comb) in [int, float]:
+                updated.append(lin_comb)
+            elif isinstance(lin_comb, self.LinAttrComb):
+                coefficients = lin_comb.coefficients
+                if not lin_comb.coefficients:
+                    l = len(lin_comb.attributes)
+                    coefficients = [1./l]*l  # equal weighting
+                value = 0
+                for attr_name, weight in zip(lin_comb.attributes, coefficients):
+                    value += getattr(self, attr_name) * weight
+                updated.append(value)
+            else:
+                raise TypeError(f'Unexpected type {type(vector_constituency)} of vector_consituency.')
+
+        return np.array(updated)
+
+    def _update_mental_health_weights(self):
+        self.mental_health_weights = self._calc_health_weights(self.mental_health_map)
+
+    def _update_physical_health_weights(self):
+        self.physical_health_weights = self._calc_health_weights(self.physical_health_map)
+
+
+    def __del__(self):
+        """Serialize self to file"""
+        with open(os.path.join(BASE_DIR, 'tamagotchi', 'saved', self.unique_name + '.tamag'), 'w') as f:
+            pickle.dump(self, f)
+
+
