@@ -1,5 +1,6 @@
 from multiprocessing import Process
 from tamagotchi.run import run as run_tamagotchi
+from portal.run import run as run_portal
 
 
 if __name__ == '__main__':
@@ -7,6 +8,10 @@ if __name__ == '__main__':
 
     proc_handles.append(Process(
         target=run_tamagotchi,
+    ))
+
+    proc_handles.append(Process(
+        target=run_portal,
     ))
 
     for p in proc_handles:

@@ -2,7 +2,7 @@ import os
 import time
 import pickle
 from tamagotchi.domestic import Dog, Cat
-from tamagotchi.settings import LOOP_PERIOD
+from tamagotchi.settings import LOOP_PERIOD, TAMAGOTCHI_SAVE_DIR
 from settings import BASE_DIR
 import logging
 
@@ -11,7 +11,8 @@ def run():
     logger = logging.getLogger(__name__)
 
     # load tamagotchis from file
-    instances = load_tamagotchis_from_file(os.path.join(BASE_DIR, 'tamagotchi', 'saved'))
+    # instances = load_tamagotchis_from_file(os.path.join(TAMAGOTCHI_SAVE_DIR, 'tamagotchi', 'saved'))
+    instances = []
 
     if instances == []:
         print('No Tamagotchis available, do you want to create one?')

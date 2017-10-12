@@ -3,10 +3,9 @@ import numpy as np
 from math import log
 import pickle
 import time
-from tamagotchi.settings import LOOP_PERIOD
-from settings import BASE_DIR
+from tamagotchi.settings import LOOP_PERIOD, TAMAGOTCHI_SAVE_DIR, STATUS_ENCODER_DECODER, STATUS_SENDER
 from collections import namedtuple, OrderedDict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 # input affects Tamagotchi's internal state
 ALLOWABLE_INPUTS = {
@@ -37,7 +36,8 @@ class Tamagotchi():
     """
     # general attributes
     species_name = 'Tamagotchi'
-    unique_name = "abcdef"
+    unique_name = None
+
 
     # possible active states
     ACTIVE_STATES = {
@@ -174,11 +174,21 @@ class Tamagotchi():
         disease_succeptibility,
     ])
 
+
     def __init__(self,  unique_name):
+        # TODO: enforce uniqueness
         self.unique_name = unique_name
         # update health weights
         self._update_mental_health_weights()
         self._update_physical_health_weights()
+        self.encoder_decoder = STATUS_ENCODER_DECODER()
+
+        # configure available publications
+        self.status_publisher = STATUS_SENDER
+        STATUS_PUB = self.unique_name + '_status'
+        self.publicatoins = {
+            STATUS_PUB : self.status_publisher(STATUS_PUB),
+        }
 
     @property
     def mental_health(self):
@@ -208,7 +218,9 @@ class Tamagotchi():
             abs(self.state)
         )
         return health
-    # energy properties
+
+    # TODO: energy properties
+
     @staticmethod
     def _normalize(vector:np.array) -> np.array:
         """
@@ -252,16 +264,31 @@ class Tamagotchi():
         result_dict.update(input_dict)
         return np.matrix(list(result_dict.values())).T
 
+    def _publish_status(self,
+                       topic:str,   # topic of the broadcast
+                       message:Any  # encoded message
+        ):
+        """publish the public state to the outside world"""
+        encoded_state = self.encoder_decoder.encode(message)
+        # pass message to publiser
+        self.publicatoins[topic].send_message(encoded_state)
 
     def update(self, input=None):
         """
-        Update state
+        Update everything leading up to status
         """
-
         if input:
             self._receive_input(input)
 
         self._update_time_dependant_vars()
+
+        # pack health status
+        health_status = dict(
+            mental_health=self.mental_health,
+            physical_health=self.physical_health
+        )
+
+        self._publish_status(self.unique_name + '_status', health_status)
 
         return (self.mental_health, self.physical_health)
 
@@ -282,9 +309,6 @@ class Tamagotchi():
         self._update_physical_health_weights()
 
         # update activity stage / sleep triggers
-
-        print(f'age: {self.age} s; mental health: {self.mental_health}; phys. health: {self.physical_health}; appetite: {self.appetite}; ')
-
         self._last_update_time = this_update_time
 
     def _calc_health_weights(self, vector_constituency:Union[float, int, Dict[str, LinAttrComb]]) -> np.array:
@@ -316,9 +340,9 @@ class Tamagotchi():
         self.physical_health_weights = self._calc_health_weights(self.physical_health_map)
 
 
-    def __del__(self):
-        """Serialize self to file"""
-        with open(os.path.join(BASE_DIR, 'tamagotchi', 'saved', self.unique_name + '.tamag'), 'w') as f:
-            pickle.dump(self, f)
+    # def __del__(self):
+    #     """Serialize self to file"""
+    #     with open(os.path.join(TAMAGOTCHI_SAVE_DIR, self.unique_name + '.tamag'), 'w') as f:
+    #         pickle.dump(self, f)
 
 

@@ -1,3 +1,9 @@
 import os
-BASE_DIR = os.path.abspath('.')
-LOOP_PERIOD = 5  # seconds
+from settings import BASE_DIR
+from tamagotchi.state_encode import PickleEncodeDecode, NoEncodeDecode, JsonEncodeDecode
+from common.message_passing import ZMQPublisher
+
+LOOP_PERIOD = 1  # seconds
+TAMAGOTCHI_SAVE_DIR = os.path.join(BASE_DIR, 'tamagotchi', 'saved')
+STATUS_ENCODER_DECODER = JsonEncodeDecode
+STATUS_SENDER = ZMQPublisher
