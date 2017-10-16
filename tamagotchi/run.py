@@ -3,7 +3,7 @@ import time
 import pickle
 from tamagotchi.domestic import Dog, Cat
 from tamagotchi.settings import LOOP_PERIOD, TAMAGOTCHI_SAVE_DIR
-from settings import BASE_DIR
+from settings import BASE_DIR, PET_PORT_MAP
 import logging
 
 def run():
@@ -33,7 +33,7 @@ def run():
             time_delta = time.time() - time_start
             if time_delta < 0:
                 logger.warning(f"Loop period over-run by {time_delta} seconds!")
-            time.sleep(LOOP_PERIOD - time_delta if time_delta > 0 else 0)
+            time.sleep(LOOP_PERIOD - time_delta if time_delta < LOOP_PERIOD else 0)
     except KeyboardInterrupt:
         for inst in instances:
             del inst

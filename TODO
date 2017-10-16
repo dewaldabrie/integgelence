@@ -1,6 +1,8 @@
 [done] test mock input passing to tamagotchi
 [done] add time loop
 [] add event queues
+    [done] pub-sub
+    [] pair
 [] add meta class for tamagotchi factory
 [] Add life-cycles
 [] Add interactions
