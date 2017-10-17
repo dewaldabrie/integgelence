@@ -100,7 +100,14 @@ class Tamagotchi():
 
 
     # state
-    # perfect/healthy state variable has value of zero
+    STATE_NAMES = [
+        'fitness',
+        'nourishment',
+        'social_stimulation',
+        'undiseased',
+    ]
+
+    # initial state values: perfect/healthy state variable has value of zero
     nurishment = -0.5  # hungry <--> overfed
     social = -0.5  # lonely <--> annoid
     fitness = -0.5  # unfit <--> chronic exhaustion
@@ -120,6 +127,8 @@ class Tamagotchi():
         0.6,  # fitness state sensitvity to age (0 - 1)
         0.9,  # undiseased state sensitvity to age (0 - 1)
     ])
+
+
 
     # Create the transformation matrix T to map inputs to state
     #         Input vector : (n,1)
@@ -229,7 +238,7 @@ class Tamagotchi():
         )
 
         # convert state array into dict with labels
-        state_dict = dict((k,v) for k,v in zip(ALLOWABLE_INPUTS, self.state.tolist()[0]))
+        state_dict = dict((k,v) for k,v in zip(Tamagotchi.STATE_NAMES, self.state.tolist()[0]))
 
         status.update(state_dict)
         status.update(health_status)
@@ -378,7 +387,6 @@ class Tamagotchi():
                 updated.append(value)
             else:
                 raise TypeError(f'Unexpected type {type(vector_constituency)} of vector_consituency.')
-        print("updated weights: ,", updated)
         return np.array(updated)
 
 

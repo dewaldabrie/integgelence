@@ -67,5 +67,12 @@ class TestInputsToTamagotchi(unittest.TestCase):
             status_before['physical_health'],
         )
 
+    @unittest.skip
+    def test_input_to_state_mapping(self):
+        """Check that the inputs map to reasonable state changes"""
+        input = {
+            'feed': 1.0,  # 1 portion
+        }
+
 if __name__ == '__main__':
     unittest.main()
