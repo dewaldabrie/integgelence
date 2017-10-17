@@ -13,14 +13,14 @@ def run():
 
 
     # create portal (for menu options)
-    butch_portal = Portal(pet_name='Butch')
+    pet_portal = Portal(pet_name='Butch')
 
     try:
         while True:
             time_start = time.time()
 
             # show pet input
-            butch_portal.main()
+            pet_portal.main()
 
 
             # sleep for the remainder of the period
@@ -29,5 +29,7 @@ def run():
                 logger.warning(f"Loop period over-run by {time_delta} seconds!")
             time.sleep(LOOP_PERIOD - time_delta if time_delta < LOOP_PERIOD else 0)
     except KeyboardInterrupt:
+        for socket_bearer in pet_portal.subscriptions.values():
+            socket_bearer.context.destroy(linger=None)
         print('goodbye.')
 

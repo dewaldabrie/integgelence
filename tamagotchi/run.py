@@ -1,25 +1,19 @@
 import os
 import time
 import pickle
-from tamagotchi.domestic import Dog, Cat
+from tamagotchi.domestic import Tamagotchi
 from tamagotchi.settings import LOOP_PERIOD, TAMAGOTCHI_SAVE_DIR
 from settings import BASE_DIR, PET_PORT_MAP
 import logging
 
-def run():
+def run(pet_name:str, time_speedup_factor:float=1):
 
     logger = logging.getLogger(__name__)
 
-    # load tamagotchis from file
-    # instances = load_tamagotchis_from_file(os.path.join(TAMAGOTCHI_SAVE_DIR, 'tamagotchi', 'saved'))
-    instances = []
 
-    if instances == []:
-        print('No Tamagotchis available, do you want to create one?')
-        # TODO implement factory
-        instances.append(Dog('Butch'))
-    else:
-        print('Loaded the following tamagotchis: ', instances)
+    instances = []
+    # TODO implement factory
+    instances.append(Tamagotchi(pet_name, time_speedup_factor=time_speedup_factor))
 
     try:
         while True:
@@ -34,15 +28,9 @@ def run():
             if time_delta < 0:
                 logger.warning(f"Loop period over-run by {time_delta} seconds!")
             time.sleep(LOOP_PERIOD - time_delta if time_delta < LOOP_PERIOD else 0)
+
     except KeyboardInterrupt:
         for inst in instances:
-            del inst
+            for socket_bearer in inst._publications.values():
+                socket_bearer.context.destroy(linger=None)
         print('goodbye.')
-
-def load_tamagotchis_from_file(save_dir):
-    file_list = [f for f in os.listdir(save_dir) if f.endswith('.tamag')]
-    tamagotchi_list = []
-    for f in file_list:
-        with open(f, 'r'):
-            tamagotchi_list.append(pickle.load(f))
-    return tamagotchi_list

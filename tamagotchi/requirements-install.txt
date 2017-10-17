@@ -4,4 +4,9 @@
 #
 #    pip-compile --output-file requirements.in/requirements-install.txt requirements.in/requirements-install.in
 #
+--extra-index-url http://pypi.aws.cmcrc.com/pypi
+--trusted-host pypi.aws.cmcrc.com
+
 numpy==1.13.3
+pyzmq==16.0.2
+typing==3.6.2

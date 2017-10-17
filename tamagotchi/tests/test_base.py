@@ -1,11 +1,16 @@
 import unittest
 import numpy as np
-from tamagotchi.base import Tamagotchi, ALLOWABLE_INPUTS, ALLOWABLE_INTERACTIONS
+from tamagotchi.base import Tamagotchi, ALLOWABLE_INPUTS
 
 class TestTamagotchiBase(unittest.TestCase):
     """Unit tests fort the Tamagotchi base class"""
     def setUp(self):
-        self.t = Tamagotchi()
+        self.t = Tamagotchi('Butch')
+
+    def tearDown(self):
+        for socket_bearer in self.t._publications.values():
+            socket_bearer.context.destroy(linger=None)
+        del self.t
 
     def test_state_change_calc(self):
         """
@@ -115,3 +120,6 @@ class TestTamagotchiBase(unittest.TestCase):
         self.t._calc_health(weights)
 
         self.assertEqual(self.t._calc_health(weights), 0.5)
+
+if __name__ == '__main__':
+    unittest.main()

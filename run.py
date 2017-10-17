@@ -8,6 +8,8 @@ if __name__ == '__main__':
 
     proc_handles.append(Process(
         target=run_tamagotchi,
+        args=('Butch',),
+        kwargs={'time_speedup_factor':1.0}
     ))
 
     for p in proc_handles:

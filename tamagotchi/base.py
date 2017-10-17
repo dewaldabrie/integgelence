@@ -210,7 +210,7 @@ class Tamagotchi():
 
         # configure available publications
         STATUS_PUB = self.unique_name + '_status'
-        self._publicatoins = {
+        self._publications = {
             STATUS_PUB : STATUS_SENDER(STATUS_PUB, STATUS_ENCODER_DECODER),
         }
 
@@ -333,7 +333,7 @@ class Tamagotchi():
                         message:Any  # encoded message
                         ):
         # pass message to publiser
-        self._publicatoins[topic].send_message(message)
+        self._publications[topic].send_message(message)
 
     def _update_time_dependant_vars(self):
         """
@@ -386,10 +386,5 @@ class Tamagotchi():
 
         return np.array(updated)
 
-
-        # def __del__(self):
-        #     """Serialize self to file"""
-        #     with open(os.path.join(TAMAGOTCHI_SAVE_DIR, self.unique_name + '.tamag'), 'w') as f:
-        #         pickle.dump(self, f)
 
 

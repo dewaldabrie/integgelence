@@ -35,6 +35,10 @@ class ZMQServer:
         self.socket.bind(url)
         logger.info("Server bound to %s." % url)
 
+    def __del__(self):
+        self.context.destroy(linger=None)
+
+
 class ZMQClient:
     def __init__(self,
                  socket_type,                 # ex. zmq.PAIR, zmq.SUB
@@ -57,6 +61,9 @@ class ZMQClient:
         url = "%s://%s:%s" % (protocol, host, port)
         self.socket.connect(url)
         logger.info("Client bound to %s." % url)
+
+    def __del__(self):
+        self.context.destroy(linger=None)
 
 
 class ZMQPairServer(Receiver, Sender, ZMQServer):
