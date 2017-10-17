@@ -31,24 +31,28 @@ class Portal:
 
     def show_menu(self):
         """show the menu options"""
-        for idx, action in enumerate(ALLOWABLE_INPUTS):
-            print(f"{idx+1}. {action}")
-        print(f"{len(ALLOWABLE_INPUTS)+1}. Check on Tamagotchi")
+        options = '\t'.join([f"{idx+1}. {action}" for (idx, action) in enumerate(ALLOWABLE_INPUTS)])
+        options += f"\t {len(ALLOWABLE_INPUTS)+1}. Check on Tamagotchi"
+        print(options)
 
     def get_user_input(self):
         """Get and validate user input"""
         i = input().strip()
         if i not in [str(a) for a in range(1,len(ALLOWABLE_INPUTS)+2)]:
-            print(f"Invalid input {i}, please try again.")
+            print(f"Invalid input {i}, please try again.\n")
+            return
+        # show status
+        status = self.subscriptions['status'].receive_message()
+        print("New status from %s: %s" % (self.pet_name, status))
+
         # return input in dictionary format, assume unity quantity
-        if i == str(len(ALLOWABLE_INPUTS)+1):
-            status = self.subscriptions['status'].receive_message()
-            print("New status from %s: %s" % (self.pet_name, status))
-        else:
-            return {ALLOWABLE_INPUTS[int(i)]: 1.0}
+        if i != str(len(ALLOWABLE_INPUTS) + 1):
+            return {ALLOWABLE_INPUTS[int(i)-1]: 1.0}
+
     def main(self):
         """Show use the menu and act on his/her input"""
         print("Choose the number of the action you would like to peform for you pet:")
         self.show_menu()
         input = self.get_user_input()
-        self.sender.send_message(input)
+        if input:
+            self.sender.send_message(input)

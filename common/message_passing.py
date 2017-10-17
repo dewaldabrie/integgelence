@@ -3,7 +3,7 @@ import abc
 import zmq
 import asyncio
 import logging
-from typing import Union, Callable
+from typing import Union, Callable, Iterator, Any
 
 logger = logging.getLogger(__name__)
 ch = logging.StreamHandler(sys.stdout)
@@ -96,6 +96,7 @@ class ZMQPairServer(Receiver, Sender, ZMQServer):
         return message
 
 
+
 class ZMQPairClient(Receiver, Sender, ZMQClient):
     """
     Two way communication between two entities.
@@ -122,18 +123,19 @@ class ZMQPairClient(Receiver, Sender, ZMQClient):
             message = self.encoder_decode.encode(message)
         self.socket.send_string(message)
 
-    def receive_message(self):
-        message = self.socket.recv_string()
+    def receive_message(self, flags=None):
+        message = self.socket.recv_string(flags)
         if self.encoder_decode:
             message = self.encoder_decode.decode(message)
         return message
 
-    async def receive_messages(self, callback:Callable):
-        """Use a coroutine to send new messages to a callback function"""
-        # TODO: test this
+    def receive_messages(self):
+        """Iteratively yeild all availables messages"""
         while True:
-            callback(await self.receive_message())
-
+            try:
+                yield self.receive_message(zmq.NOBLOCK)
+            except zmq.error.ZMQError:
+                return
 
 
 class ZMQPublisher(Sender, ZMQServer):
@@ -193,17 +195,19 @@ class ZMQSubscriber(Receiver, ZMQClient):
     def receive_message(self):
         """Check for a new status message"""
         string = None
+        # skip to the latest message
         while True:
             try:
                 res = self.socket.recv_string(zmq.NOBLOCK)
                 string = res
             except zmq.error.ZMQError:
                 break
-        string = string.replace(self.topic, '').strip()
-        if self.encoder_decode:
-            message = self.encoder_decode.decode(string)
-            return message
-        return string
+        if string:
+            string = string.replace(self.topic, '').strip()
+            if self.encoder_decode:
+                message = self.encoder_decode.decode(string)
+                return message
+            return string
 
     async def receive_messages(self, callback:Callable):
         """Use a coroutine to send new messages to a callback function"""

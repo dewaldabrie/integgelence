@@ -1,0 +1,56 @@
+INTEGGELENCE TAMAGOTCHI
+-----------------------
+
+Welcome to the Integgelence Tamagotchi project.
+
+This is an attempt at a generalizable Tamagotchi zoo.
+
+The framework supports the creation of multiple pet Tamagotchis.
+The Tamagotchis run independently from each other and each has the
+ following capabilities:
+ * broadcasts its health and other metrics
+ * can receive inputs from its
+owners that affect its health.
+
+
+ Message passing architecture
+ ````````````````````````````
+
+ Communication between the owners portal into the Tamagotchi world
+ and the Tamagotchis are done with message passing over TCP sockets.
+
+ This allows the Tamagotchis to be on distributed platforms.
+
+
+ Easy attribute extension
+ ````````````````````````
+
+ The base Tamagotchi has a set of defined physical and mental attributes
+ which characterizes its strengths and weaknesses, likes and dislikes.
+
+ Derived classes can easily deviate from this.
+
+ The user inputs are used together with the animal attributes to change
+ the creatures internal physical and mental state. These states are used
+ to find single values for mental and physical health.
+
+ State updates are calculated in a vectorised implementation.
+
+
+ Easy to add new inputs
+ ``````````````````````
+
+ The framework makes it easy to add new user inputs.
+ The Tamagotchi models can then updated to map inputs to internal state change
+ my adding new rows and colums to the tranformation matrices.
+
+
+ How to run the software
+ ```````````````````````
+ Clone onto your system from github.
+ Change directory into the top-level folder and then:
+
+     $ cd tamagotchi
+     $ pip install -r requirements-tests.txt
+     $ python run.py
+

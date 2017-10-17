@@ -1,16 +1,25 @@
 import unittest
 import numpy as np
 from tamagotchi.base import Tamagotchi, ALLOWABLE_INPUTS
+from common.message_passing import ZMQPairServer
+from tamagotchi.state_encode import JsonEncodeDecode
+from settings import PET_PORT_MAP
+from time import sleep
 
 class TestTamagotchiBase(unittest.TestCase):
     """Unit tests fort the Tamagotchi base class"""
     def setUp(self):
         self.t = Tamagotchi('Butch')
+        self.input_sender = ZMQPairServer(
+            encoder_decoder=JsonEncodeDecode,
+            port=PET_PORT_MAP['Butch']
+        )
 
     def tearDown(self):
         for socket_bearer in self.t._publications.values():
             socket_bearer.context.destroy(linger=None)
         del self.t
+        self.input_sender.context.destroy(linger=None)
 
     def test_state_change_calc(self):
         """
@@ -29,10 +38,13 @@ class TestTamagotchiBase(unittest.TestCase):
         # set state to average before
         self.t.state = np.zeros(len(self.t.state), dtype=np.float64)
 
-        # calculate state change based on fake input
-        self.t._receive_input(fake_input)
+        # send the message
+        self.input_sender.send_message(fake_input)
+        sleep(0.1) # allow for message propogation
 
-        print(self.t.state)
+        # calculate state change based on fake input
+        self.t._process_input_queue()
+
         self.assertTrue((self.t.state == np.ones(4, dtype=np.float64)).all())
 
 
@@ -86,8 +98,8 @@ class TestTamagotchiBase(unittest.TestCase):
         """
         Can mental health be calculated from the state and weights vector?
         """
-        # create unity state
-        self.t.state = np.ones(5, dtype=np.float64)
+        # create perfect state (zero)
+        self.t.state = np.zeros(len(self.t.state), dtype=np.float64)
         # create unity weights
         self.t.mental_health_weights = np.ones(len(self.t.state), dtype=np.float64)
         self.t.physical_health_weights = self.t.mental_health_weights
@@ -95,8 +107,9 @@ class TestTamagotchiBase(unittest.TestCase):
         mental_health = self.t.mental_health
         physical_health = self.t.physical_health
 
-        self.assertEqual(mental_health, 1.0)
-        self.assertEqual(physical_health, 1.0)
+        # perfect health is unity
+        self.assertAlmostEqual(mental_health, 1.0)
+        self.assertAlmostEqual(physical_health, 1.0)
 
     def test_internal_health_calc(self):
         # create 0.5 state

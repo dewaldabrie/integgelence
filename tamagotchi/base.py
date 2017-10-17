@@ -1,23 +1,21 @@
-import os
 import numpy as np
 from math import log
-import pickle
 import time
-from tamagotchi.settings import LOOP_PERIOD, TAMAGOTCHI_SAVE_DIR, STATUS_ENCODER_DECODER, STATUS_SENDER, INPUT_RECEIVER
+from tamagotchi.settings import LOOP_PERIOD, TAMAGOTCHI_SAVE_DIR, STATUS_ENCODER_DECODER, STATUS_SENDER, INPUT_RECEIVER, \
+    INPUT_ENCODER_DECODER
 from collections import namedtuple, OrderedDict
 from typing import Dict, List, Union, Any
 from settings import PET_PORT_MAP
-from multiprocessing import Process
-from queue import Queue
 from functools import lru_cache
+import zmq
 
 # input affects Tamagotchi's internal state
 ALLOWABLE_INPUTS = [
-            'feed',
-            'pet',
-            'excercise',
-            'immunize',
             'clean',
+            'excercise',
+            'feed',
+            'immunize',
+            'pet',
         ]
 
 
@@ -107,12 +105,6 @@ class Tamagotchi():
     social = -0.5  # lonely <--> annoid
     fitness = -0.5  # unfit <--> chronic exhaustion
     undiseased = 0  # terminally diseased <--> auto-immune disorder
-    state_dict = {
-        'nurishment': nurishment,
-        'social': social,
-        'fitness': fitness,
-        'undiseased': undiseased,
-    }
 
     # Model health degradation with age
     #         State vector (S): (1,m)
@@ -145,33 +137,26 @@ class Tamagotchi():
     # rows have to sum to 1
     #   food_affinity  touch_affinity  social_affinity  excercise_affinity  appetite  excercise_required  disease_succeptibility
     B = np.matrix([
+        [0.0,          0.0,             0.0,             0.5,                0.0,     0.5,                 0.0,               ],  # fitness
         [0.5,          0.0,             0.0,             0.0,                0.5,     0.0,                 0.0,               ],  # nourishment
         [0.0,          0.5,             0.5,             0.0,                0.0,     0.0,                 0.0,               ],  # social
-        [0.0,          0.0,             0.0,             0.5,                0.0,     0.5,                 0.0,               ],  # fitness
         [0.0,          0.0,             0.1,             0.2,                0.2,     0.0,                 0.5,               ],  # undiseased
     ])
 
     # Input to attribute mapping
     # mxn
     # rows have to sum to 1
-    #   'feed', 'pet', 'excercise', 'immunize', 'clean'
+    #   'clean',  'excercise',  'feed', 'immunize', 'pet',
     A = np.matrix([
-        [1.0,    0.0,    0.0,          0.0,        0.0],    # food_affinity
-        [0.0,    1.0,    0.0,          0.0,        0.0],    # touch_affinity
-        [0.0,    0.5,    0.5,          0.0,        0.0],    # social_affinity
-        [0.0,    0.0,    1.0,          0.0,        0.0],   # excercise_affinity
-        [1.0,    0.0,    0.0,          0.0,        0.0],   # appetite
-        [0.0,    0.0,    1.0,          0.0,        0.0],   # excercise_required
-        [0.0,    0.0,    0.0,          0.1,        0.9],   # disease_succeptibility
+        [0.0,       0.0,         1.0,      0.0,      0.0,    ],    # food_affinity
+        [0.0,       0.0,         0.0,      0.0,      1.0,    ],    # touch_affinity
+        [0.0,       0.5,         0.0,      0.0,      0.5,    ],    # social_affinity
+        [0.0,       1.0,         0.0,      0.0,      0.0,    ],   # excercise_affinity
+        [0.0,       0.0,         1.0,      0.0,      0.0,    ],   # appetite
+        [0.0,       1.0,         0.0,      0.0,      0.0,    ],   # excercise_required
+        [0.9,       0.0,         0.0,      0.1,      0.0,    ],   # disease_succeptibility
     ])
 
-    # health state vector
-    state = np.array([
-        nurishment,
-        social,
-        fitness,
-        undiseased,
-    ])
 
     # health properties
     # this represents relative importance of the various state variables
@@ -181,32 +166,33 @@ class Tamagotchi():
     LinAttrComb = namedtuple('LinearAttributeCombination', ('attributes', 'coefficients'))
 
     mental_health_map = OrderedDict(
+        fitness=LinAttrComb(['excercise_affinity'], []),
         nourishment=LinAttrComb(['food_affinity'], []),
         social=LinAttrComb(['touch_affinity', 'social_affinity'], []),
-        fitness=LinAttrComb(['excercise_affinity'], []),
         undiseased=.5,
     )
 
     physical_health_map = OrderedDict(
+        fitness=LinAttrComb(['excercise_required'], []),
         nourishment=LinAttrComb(['appetite'], []),
         social=0.,
-        fitness=LinAttrComb(['excercise_required'], []),
         undiseased=LinAttrComb(['disease_succeptibility'], []),
     )
 
-    @staticmethod
-    def _input_to_queue(queue, unique_name):
-        """Set up ZMQ pair client to owner anad add all inputs to a queue for processing"""
-        input_reader = INPUT_RECEIVER(port=PET_PORT_MAP[unique_name])
-        while True:
-            input = input_reader.receive_message()
-            queue.put(input)
 
     def __init__(self,  unique_name:str, time_speedup_factor:float=1.0):
         # TODO: enforce uniqueness
         self.unique_name = unique_name
         self._time_speedup_factor = time_speedup_factor
         self._time_born = time.time()
+
+        # initialize state
+        self.state = np.matrix([
+            self.fitness,
+            self.nurishment,
+            self.social,
+            self.undiseased,
+        ])
 
         # configure available publications
         STATUS_PUB = self.unique_name + '_status'
@@ -215,13 +201,11 @@ class Tamagotchi():
         }
 
         # configure link to owner (for receiving inputs)
-        # spawn seperate process to listen for inputs and add to a queue
-        self._input_queue = Queue()
-        self._input_proc = Process(
-            target=self._input_to_queue,
-            args=(self._input_queue, self.unique_name)
+        self.input_reader = INPUT_RECEIVER(
+            encoder_decoder=INPUT_ENCODER_DECODER,
+            port=PET_PORT_MAP[self.unique_name]
         )
-        self._input_proc.start()
+
 
     def update(self, input=None):
         """
@@ -244,6 +228,10 @@ class Tamagotchi():
             life_stage=self.life_stage,
         )
 
+        # convert state array into dict with labels
+        state_dict = dict((k,v) for k,v in zip(ALLOWABLE_INPUTS, self.state.tolist()[0]))
+
+        status.update(state_dict)
         status.update(health_status)
         status.update(age_status)
 
@@ -254,11 +242,11 @@ class Tamagotchi():
 
     @property
     def mental_health(self):
-        return self._calc_health(self._mental_health_weights)
+        return float(self._calc_health(self._mental_health_weights))
 
     @property
     def physical_health(self):
-        return self._calc_health(self._physical_health_weights)
+        return float(self._calc_health(self._physical_health_weights))
 
     # @lru_cache(maxsize=None)
     def _calc_health(self, weights):
@@ -276,12 +264,15 @@ class Tamagotchi():
         # normalize the selection weights
         norm_weights = self._normalize(weights)
         # calculate health
-        health = 0.0 + np.dot(
+        health = np.dot(
             norm_weights,
-            abs(self.state)
+            np.transpose(self.map_state_to_health(self.state))
         )
         return health
 
+    @staticmethod
+    def map_state_to_health(state:np.array) -> np.array:
+        return -1 * abs(state) + 1
     # TODO: energy properties
 
     @staticmethod
@@ -306,9 +297,8 @@ class Tamagotchi():
 
         Snext += B x A x I
         """
-        while not self._input_queue.empty():
-            input = self._input_queue.get_nowait()
-            input_mat = self._parse_input(input)
+        for message in self.input_reader.receive_messages():
+            input_mat = self._parse_input(message)
             self.state = self.state + np.squeeze(self.B*self.A*input_mat)
             self._apply_state_limits()
 
@@ -326,7 +316,10 @@ class Tamagotchi():
         """
         result_dict = dict((name, 0.) for name in ALLOWABLE_INPUTS)
         result_dict.update(input_dict)
-        return np.matrix(list(result_dict.values())).T
+        # keep alphabetical order in keys
+        sorted_tuples = sorted(result_dict.items(), key=lambda t:t[0])
+        input_matrix =  np.matrix([ v for (k,v) in sorted_tuples]).T
+        return input_matrix
 
     def _publish_status(self,
                         topic:str,   # topic of the broadcast
@@ -370,8 +363,10 @@ class Tamagotchi():
         """
         updated = []
         for name, lin_comb in vector_constituency.items():
+            # for hardcoded values that don't use linear combinations
             if type(lin_comb) in [int, float]:
                 updated.append(lin_comb)
+            # for linear combinations
             elif isinstance(lin_comb, self.LinAttrComb):
                 coefficients = lin_comb.coefficients
                 if not lin_comb.coefficients:
@@ -383,7 +378,7 @@ class Tamagotchi():
                 updated.append(value)
             else:
                 raise TypeError(f'Unexpected type {type(vector_constituency)} of vector_consituency.')
-
+        print("updated weights: ,", updated)
         return np.array(updated)
 
 
