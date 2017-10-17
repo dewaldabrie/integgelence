@@ -54,3 +54,23 @@ owners that affect its health.
      $ pip install -r requirements-tests.txt
      $ python run.py
 
+How to run the notebook
+```````````````````````
+Fire up the notebook to see graphs of some of the formulas used:
+
+    $ cd notebooks
+    $ jupyter notebook
+
+Navigate to InteractionModel.ipynb
+
+To do
+`````
+[] fix bug in input-to-internal-state-mapping
+[] create Tamagotchi factory class with some randomness built in
+[] add Tamagotchi activity state (eating, sleeping, playing, etc)
+[] add Tamagotchi energy state (activities deplete energy)
+[] add concept of money (owner has limited resources)
+[] add concept of environment that can bring cold/hot weather,
+   disease outbreak, etc.
+[] add pet-to-pet interaction capability
+[] deploy a Tamagotchi to the cloud
