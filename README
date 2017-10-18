@@ -92,6 +92,9 @@ a bad impact on nutrition. Overpetting can similarly have a mad impact on social
 
 To do
 `````
+[] do some terminal screen painting in the portal
+    [] https://docs.python.org/3/howto/curses.html
+    [] https://www.youtube.com/watch?v=eN1eZtjLEnU
 [] create Tamagotchi factory class with some randomness built in
 [] add Tamagotchi activity state (eating, sleeping, playing, dead, etc)
 [] add Tamagotchi energy state (activities deplete energy)
