@@ -70,6 +70,26 @@ Fire up the notebook to see graphs of some of the formulas used:
 
 Navigate to InteractionModel.ipynb
 
+Core concepts
+-------------
+Tamagotchi affinity
+```````````````````
+Your creature has a set of requirements and affinities. For example:
+* A large creater will require more food
+* A social creature will get a mental boost from petting
+* An asocial creature will be annoid by much petting
+
+Under and over supply
+`````````````````````
+In order to improve your Tamagothi's health you can supply it with inputs such as:
+* food
+* petting
+* injections
+However, you should supply just until it reaches a healthy state. Supplying too much
+indiscriminately will drive down it's health. For example, over-feeding is actually has
+a bad impact on nutrition. Overpetting can similarly have a mad impact on social stimulation.
+
+
 To do
 `````
 [] create Tamagotchi factory class with some randomness built in
