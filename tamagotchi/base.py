@@ -238,7 +238,7 @@ class Tamagotchi():
         )
 
         # convert state array into dict with labels
-        state_dict = dict((k,v) for k,v in zip(Tamagotchi.STATE_NAMES, self.state.tolist()[0]))
+        state_dict = dict((k,v) for k,v in zip(Tamagotchi.STATE_NAMES, self.state.T.tolist()[0]))
 
         status.update(state_dict)
         status.update(health_status)
