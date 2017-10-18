@@ -13,46 +13,53 @@ The Tamagotchis run independently from each other and each has the
 owners that affect its health.
 
 
- Message passing architecture
- ````````````````````````````
+Message passing architecture
+````````````````````````````
 
- Communication between the owners portal into the Tamagotchi world
- and the Tamagotchis are done with message passing over TCP sockets.
+Communication between the owners portal into the Tamagotchi world
+and the Tamagotchis are done with message passing over TCP sockets.
 
- This allows the Tamagotchis to be on distributed platforms.
-
-
- Easy attribute extension
- ````````````````````````
-
- The base Tamagotchi has a set of defined physical and mental attributes
- which characterizes its strengths and weaknesses, likes and dislikes.
-
- Derived classes can easily deviate from this.
-
- The user inputs are used together with the animal attributes to change
- the creatures internal physical and mental state. These states are used
- to find single values for mental and physical health.
-
- State updates are calculated in a vectorised implementation.
+This allows the Tamagotchis to be on distributed platforms.
 
 
- Easy to add new inputs
- ``````````````````````
+Easy attribute extension
+````````````````````````
 
- The framework makes it easy to add new user inputs.
- The Tamagotchi models can then updated to map inputs to internal state change
- my adding new rows and colums to the tranformation matrices.
+The base Tamagotchi has a set of defined physical and mental attributes
+which characterizes its strengths and weaknesses, likes and dislikes.
+
+Derived classes can easily deviate from this.
+
+The user inputs are used together with the animal attributes to change
+the creatures internal physical and mental state. These states are used
+to find single values for mental and physical health.
+
+State updates are calculated in a vectorised implementation.
 
 
- How to run the software
- ```````````````````````
- Clone onto your system from github.
- Change directory into the top-level folder and then:
+Easy to add new inputs
+``````````````````````
 
-     $ cd tamagotchi
-     $ pip install -r requirements-tests.txt
-     $ python run.py
+The framework makes it easy to add new user inputs.
+The Tamagotchi models can then updated to map inputs to internal state change
+my adding new rows and colums to the tranformation matrices.
+
+
+How to run the software
+```````````````````````
+Install Python3.6 on your computer.
+Clone onto your system from github.
+Change directory into the top-level folder and then:
+
+    $ cd tamagotchi
+    $ pip install -r requirements-install.txt
+    $ python run.py
+
+How to run the tests
+```````````````````````
+To run the tests using tox, run the following from the top-level project directory:
+    $ pip install tox
+    $ tox
 
 How to run the notebook
 ```````````````````````
@@ -66,7 +73,7 @@ Navigate to InteractionModel.ipynb
 To do
 `````
 [] create Tamagotchi factory class with some randomness built in
-[] add Tamagotchi activity state (eating, sleeping, playing, etc)
+[] add Tamagotchi activity state (eating, sleeping, playing, dead, etc)
 [] add Tamagotchi energy state (activities deplete energy)
 [] add concept of money (owner has limited resources)
 [] add concept of environment that can bring cold/hot weather,
