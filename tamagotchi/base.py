@@ -121,12 +121,12 @@ class Tamagotchi():
     #         Transformation:(1,m) - (1,m).r => (1,m)
     #         Transformation matrix such that S = S_prev - C elemwise r
     #
-    C = np.array([
+    C = np.matrix([
         0.8,  # nourishment state sensitvity to age (0 - 1)
         0.1,  # social state sensitvity to age (0 - 1)
         0.6,  # fitness state sensitvity to age (0 - 1)
         0.9,  # undiseased state sensitvity to age (0 - 1)
-    ])
+    ]).T
 
 
 
@@ -201,7 +201,7 @@ class Tamagotchi():
             self.nurishment,
             self.social,
             self.undiseased,
-        ])
+        ]).T
 
         # configure available publications
         STATUS_PUB = self.unique_name + '_status'
@@ -273,16 +273,20 @@ class Tamagotchi():
         # normalize the selection weights
         norm_weights = self._normalize(weights)
         # calculate health
+        # assert self.state.shape == (5,1), "Shape is actually %s" % self.state.shape
         health = np.dot(
             norm_weights,
-            np.transpose(self.map_state_to_health(self.state))
+            self._map_state_to_health_space(self.state)
         )
         return health
 
     @staticmethod
-    def map_state_to_health(state:np.array) -> np.array:
+    def _map_state_to_health_space(state:np.array) -> np.array:
+        """
+        Model that perfect state is zero, -1 is lack, +1 is overdone.
+        See notebook InteractionModel for plot of function
+        """
         return -1 * abs(state) + 1
-    # TODO: energy properties
 
     @staticmethod
     def _normalize(vector:np.array) -> np.array:
@@ -299,6 +303,39 @@ class Tamagotchi():
         s = vector.sum()
         return vector/s if s > 0 else vector
 
+    @property
+    def _mental_health_weights(self):
+        return self._calc_health_weights(self.mental_health_map)
+
+    @property
+    def _physical_health_weights(self):
+        return self._calc_health_weights(self.physical_health_map)
+
+    # @lru_cache(maxsize=None)
+    def _calc_health_weights(self, vector_constituency: Union[float, int, Dict[str, LinAttrComb]]) -> np.array:
+        """
+        Update the vector according to the consituency definition.
+        """
+        updated = []
+        for name, lin_comb in vector_constituency.items():
+            # for hardcoded values that don't use linear combinations
+            if type(lin_comb) in [int, float]:
+                updated.append(lin_comb)
+            # for linear combinations
+            elif isinstance(lin_comb, self.LinAttrComb):
+                coefficients = lin_comb.coefficients
+                if not lin_comb.coefficients:
+                    l = len(lin_comb.attributes)
+                    coefficients = [1. / l] * l  # equal weighting
+                value = 0
+                for attr_name, weight in zip(lin_comb.attributes, coefficients):
+                    value += getattr(self, attr_name) * weight
+                updated.append(value)
+            else:
+                raise TypeError(f'Unexpected type {type(vector_constituency)} of vector_consituency.')
+        return np.array(updated)
+
+
     def _process_input_queue(self) -> None:
         """
         Recieve an input from another agent and update the
@@ -308,7 +345,8 @@ class Tamagotchi():
         """
         for message in self.input_reader.receive_messages():
             input_mat = self._parse_input(message)
-            self.state = self.state + np.squeeze(self.B*self.A*input_mat)
+            self.state = self.state + self.B*self.A*input_mat
+            assert(self.state.shape, (4,1))
             self._apply_state_limits()
 
     def _apply_state_limits(self):
@@ -355,39 +393,4 @@ class Tamagotchi():
 
 
         self._last_update_time = this_update_time
-
-
-    @property
-    def _mental_health_weights(self):
-        return self._calc_health_weights(self.mental_health_map)
-
-    @property
-    def _physical_health_weights(self):
-        return self._calc_health_weights(self.physical_health_map)
-
-    # @lru_cache(maxsize=None)
-    def _calc_health_weights(self, vector_constituency: Union[float, int, Dict[str, LinAttrComb]]) -> np.array:
-        """
-        Update the vector according to the consituency definition.
-        """
-        updated = []
-        for name, lin_comb in vector_constituency.items():
-            # for hardcoded values that don't use linear combinations
-            if type(lin_comb) in [int, float]:
-                updated.append(lin_comb)
-            # for linear combinations
-            elif isinstance(lin_comb, self.LinAttrComb):
-                coefficients = lin_comb.coefficients
-                if not lin_comb.coefficients:
-                    l = len(lin_comb.attributes)
-                    coefficients = [1. / l] * l  # equal weighting
-                value = 0
-                for attr_name, weight in zip(lin_comb.attributes, coefficients):
-                    value += getattr(self, attr_name) * weight
-                updated.append(value)
-            else:
-                raise TypeError(f'Unexpected type {type(vector_constituency)} of vector_consituency.')
-        return np.array(updated)
-
-
 

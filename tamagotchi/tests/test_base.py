@@ -100,10 +100,7 @@ class TestTamagotchiBase(unittest.TestCase):
         """
         # create perfect state (zero)
         self.t.state = np.zeros(len(self.t.state), dtype=np.float64)
-        # create unity weights
-        self.t.mental_health_weights = np.ones(len(self.t.state), dtype=np.float64)
-        self.t.physical_health_weights = self.t.mental_health_weights
-
+        # since weights sum to one, and state is perfect, health should be perfect
         mental_health = self.t.mental_health
         physical_health = self.t.physical_health
 
@@ -113,7 +110,7 @@ class TestTamagotchiBase(unittest.TestCase):
 
     def test_internal_health_calc(self):
         # create 0.5 state
-        self.t.state = np.ones(5, dtype=np.float64)*0.5
+        self.t.state = np.ones(len(self.t.state), dtype=np.float64)*0.5
         # create unity weights
         weights = np.ones(len(self.t.state), dtype=np.float64)
 
@@ -122,7 +119,7 @@ class TestTamagotchiBase(unittest.TestCase):
         self.assertEqual(self.t._calc_health(weights), 0.5)
 
         # create 0.5 state
-        self.t.state = np.ones(5, dtype=np.float64) * 0.5
+        self.t.state = np.ones(len(self.t.state), dtype=np.float64) * 0.5
         # create 0.5 weights
         # Note: Because the weights only indicate relative importance,
         # these will be normalized to sum to 1, so is the same as a

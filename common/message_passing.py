@@ -123,7 +123,7 @@ class ZMQPairClient(Receiver, Sender, ZMQClient):
             message = self.encoder_decode.encode(message)
         self.socket.send_string(message)
 
-    def receive_message(self, flags=None):
+    def receive_message(self, flags=0):
         message = self.socket.recv_string(flags)
         if self.encoder_decode:
             message = self.encoder_decode.decode(message)
@@ -192,13 +192,13 @@ class ZMQSubscriber(Receiver, ZMQClient):
         self.socket.setsockopt(zmq.SUBSCRIBE, self.topic.encode('utf-8'))
         self.encoder_decode = encoder_decoder() if encoder_decoder else None
 
-    def receive_message(self):
+    def receive_message(self, flags=zmq.NOBLOCK):
         """Check for a new status message"""
         string = None
         # skip to the latest message
         while True:
             try:
-                res = self.socket.recv_string(zmq.NOBLOCK)
+                res = self.socket.recv_string(flags=flags)
                 string = res
             except zmq.error.ZMQError:
                 break
