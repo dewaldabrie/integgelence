@@ -65,7 +65,6 @@ Navigate to InteractionModel.ipynb
 
 To do
 `````
-[] fix bug in input-to-internal-state-mapping
 [] create Tamagotchi factory class with some randomness built in
 [] add Tamagotchi activity state (eating, sleeping, playing, etc)
 [] add Tamagotchi energy state (activities deplete energy)
