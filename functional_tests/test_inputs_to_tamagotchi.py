@@ -6,10 +6,8 @@ import unittest
 from portal.settings import STATUS_RECEIVER, STATUS_ENCODER_DECODER, INPUT_SENDER, INPUT_ENCODER_DECODER
 from tamagotchi.base import Tamagotchi
 from portal import Portal
-from multiprocessing import Process
 from time import sleep
 import numpy as np
-from settings import PET_PORT_MAP
 
 class TestInputsToTamagotchi(unittest.TestCase):
 
@@ -34,6 +32,7 @@ class TestInputsToTamagotchi(unittest.TestCase):
         for socket_bearer in self.tamagotchi._publications.values():
             socket_bearer.context.destroy(linger=None)
         self.portal.sender.context.destroy(linger=None)
+        del self.tamagotchi
 
     @unittest.skip
     def test_neglect_effect_on_health(self):
@@ -78,7 +77,6 @@ class TestInputsToTamagotchi(unittest.TestCase):
         # check that the social_stimulation state variable has increased
         self.assertGreater(self.tamagotchi.state[1, 0], -1.)
 
-    @unittest.skip('fix this test')
     def test_input_to_state_mapping1(self):
         """Check that the inputs map to reasonable state changes"""
         input = {
@@ -101,7 +99,6 @@ class TestInputsToTamagotchi(unittest.TestCase):
         # feeding more contributes to overfeeding and should push physical health down
         self.assertLess(self.tamagotchi.physical_health, 1.0)
 
-    @unittest.skip('fix this test')
     def test_input_to_state_mapping2(self):
         """
         Check that the inputs map to reasonable state changes

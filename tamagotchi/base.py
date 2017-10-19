@@ -346,7 +346,6 @@ class Tamagotchi():
         for message in self.input_reader.receive_messages():
             input_mat = self._parse_input(message)
             self.state = self.state + self.B*self.A*input_mat
-            assert(self.state.shape, (4,1))
             self._apply_state_limits()
 
     def _apply_state_limits(self):
@@ -365,7 +364,7 @@ class Tamagotchi():
         result_dict.update(input_dict)
         # keep alphabetical order in keys
         sorted_tuples = sorted(result_dict.items(), key=lambda t:t[0])
-        input_matrix =  np.matrix([ v for (k,v) in sorted_tuples]).T
+        input_matrix = np.matrix([v for (k,v) in sorted_tuples]).T
         return input_matrix
 
     def _publish_status(self,
