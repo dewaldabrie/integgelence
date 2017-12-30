@@ -53,6 +53,7 @@ Change directory into the top-level folder and then:
 
     $ cd tamagotchi
     $ pip install -r requirements-install.txt
+    $ cd ../
     $ python run.py
 
 How to run the tests
