@@ -17,6 +17,7 @@ class Portal:
         if not pet_name:
             raise ValueError('Must supply pet_name field, i.e. specify recipient.')
         port = PET_PORT_MAP[pet_name]
+
         # configure input link to tamagotchi
         self.sender = INPUT_SENDER(
             encoder_decoder=INPUT_ENCODER_DECODER,
@@ -43,11 +44,17 @@ class Portal:
             return
         # show status
         status = self.subscriptions['status'].receive_message()
-        print("New status from %s: %s" % (self.pet_name, status))
+        if status:
+            if status['alive']:
+                print("New status from %s: %s" % (self.pet_name, status))
+            else:
+                print("Sorry, your pet has died, please restart to try again.")
+                exit(0)
 
         # return input in dictionary format, assume unity quantity
-        if i != str(len(ALLOWABLE_INPUTS) + 1):
+        if i != str(len(ALLOWABLE_INPUTS) + 1):  # not command to check on tamagotchi
             return {ALLOWABLE_INPUTS[int(i)-1]: 1.0}
+
 
     def main(self):
         """Show use the menu and act on his/her input"""

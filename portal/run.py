@@ -11,7 +11,6 @@ from .settings import LOOP_PERIOD
 def run():
     logger = logging.getLogger(__name__)
 
-
     # create portal (for menu options)
     pet_portal = Portal(pet_name='Butch')
 
@@ -22,12 +21,12 @@ def run():
             # show pet input
             pet_portal.main()
 
-
             # sleep for the remainder of the period
             time_delta = time.time() - time_start
             if time_delta < 0:
                 logger.warning(f"Loop period over-run by {time_delta} seconds!")
             time.sleep(LOOP_PERIOD - time_delta if time_delta < LOOP_PERIOD else 0)
+
     except KeyboardInterrupt:
         for socket_bearer in pet_portal.subscriptions.values():
             socket_bearer.context.destroy(linger=None)

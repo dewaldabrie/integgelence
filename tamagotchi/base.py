@@ -237,12 +237,18 @@ class Tamagotchi():
             life_stage=self.life_stage,
         )
 
+        # alive/dead state
+        alive_state = dict(
+            alive = self.alive,
+        )
+
         # convert state array into dict with labels
         state_dict = dict((k,v) for k,v in zip(Tamagotchi.STATE_NAMES, self.state.T.tolist()[0]))
 
         status.update(state_dict)
         status.update(health_status)
         status.update(age_status)
+        status.update(alive_state)
 
         # broadcast to the world
         self._publish_status(self.unique_name + '_status', status)
@@ -260,7 +266,7 @@ class Tamagotchi():
     # @lru_cache(maxsize=None)
     def _calc_health(self, weights):
         """
-        Calculate heath based on the relevant weights and the internal state
+        Calculate health based on the relevant weights and the internal state
 
         Perfect state variables are zero, but for the sake of human understanding,
         perfect health is represented as unity.
@@ -269,7 +275,15 @@ class Tamagotchi():
 
         The abs val of the state is taken because both extremes are bad, for
         example over-eating and under-eating
+
+        If any aspect of health hits the lower limit, the creature dies and all health
+        metrics are forced to the minimum.
         """
+
+        # check for life
+        if not self.alive:
+            self.state = np.matrix(np.ones(shape=self.state.shape)*-1.)
+
         # normalize the selection weights
         norm_weights = self._normalize(weights)
         # calculate health
@@ -278,7 +292,21 @@ class Tamagotchi():
             norm_weights,
             self._map_state_to_health_space(self.state)
         )
+
+
         return health
+
+    @property
+    def alive(self):
+        """
+        Check whether Tamagotchi is still alive based on state.
+        If any item in the state hits -1, we have a fatality.
+        :return boolean
+        """
+        if -1 in self.state:
+            return False
+        else:
+            return True
 
     @staticmethod
     def _map_state_to_health_space(state:np.array) -> np.array:
